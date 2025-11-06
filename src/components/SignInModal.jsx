@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Mail, Lock, Github, Chrome } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 const Input = ({ icon: Icon, type = 'text', placeholder, value, onChange, autoComplete }) => (
   <div className="relative">
@@ -38,12 +39,17 @@ const OAuthButton = ({ icon: Icon, label, onClick }) => (
   </button>
 );
 
-const SignInModal = ({ open, onClose }) => {
+const SignInModal = ({ open, onClose, onAuthed }) => {
   const [tab, setTab] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setMessage('');
+  }, [open]);
 
   if (!open) return null;
 
@@ -51,10 +57,43 @@ const SignInModal = ({ open, onClose }) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
-    // Placeholder UX: simulate request
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    setMessage(tab === 'signin' ? 'Signed in (demo). In production this connects to Supabase.' : 'Account created (demo). In production this connects to Supabase.');
+
+    try {
+      if (!email || !password) {
+        setMessage('Please enter email and password.');
+        return;
+      }
+
+      if (tab === 'signin') {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        setMessage('Signed in successfully.');
+        onAuthed?.(data.session);
+        onClose();
+      } else {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        setMessage(data?.user?.email ? `Confirmation sent to ${data.user.email}.` : 'Check your email to confirm your account.');
+      }
+    } catch (err) {
+      setMessage(err.message || 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOAuth = async (provider) => {
+    setLoading(true);
+    setMessage('');
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: window.location.origin } });
+      if (error) throw error;
+      // For OAuth, user is redirected; no further handling here.
+    } catch (err) {
+      setMessage(err.message || 'OAuth error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -115,8 +154,8 @@ const SignInModal = ({ open, onClose }) => {
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <OAuthButton icon={Github} label="GitHub" onClick={() => setMessage('GitHub auth (demo)')} />
-            <OAuthButton icon={Chrome} label="Google" onClick={() => setMessage('Google auth (demo)')} />
+            <OAuthButton icon={Github} label="GitHub" onClick={() => handleOAuth('github')} />
+            <OAuthButton icon={Chrome} label="Google" onClick={() => handleOAuth('google')} />
           </div>
         </div>
       </div>
