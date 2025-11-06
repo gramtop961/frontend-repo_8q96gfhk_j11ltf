@@ -1,7 +1,7 @@
 import React from 'react';
 import { Rocket, User } from 'lucide-react';
 
-const Navbar = () => {
+const Navbar = ({ onSignIn }) => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
@@ -21,7 +21,7 @@ const Navbar = () => {
           >
             Start Trial
           </a>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white shadow hover:scale-[1.02] transition-transform">
+          <button onClick={onSignIn} className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white shadow hover:scale-[1.02] transition-transform">
             <User className="h-4 w-4" />
             Sign In
           </button>
